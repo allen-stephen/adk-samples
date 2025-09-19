@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { arrayBufferToBase64, base64ToArray } from "@/lib/utils";
+import { arrayBufferToBase64, base64ToArray } from "@/utils/encoding";
 import { StructuredAgentEvent } from "@/components/SidePanel";
 
 const RECORDER_WORKLET_PATH = "/audio-recorder-worklet.js";
