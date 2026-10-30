@@ -17,19 +17,20 @@
 from __future__ import annotations
 
 import os
-import subprocess
-import sys
+from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
+from unittest import mock
 
 import pytest
-from dotenv import dotenv_values
+from google.adk.utils.env_utils import is_enterprise_mode_enabled
 from google.genai import types
 
 from app.agent import root_agent
 from app.app_utils import timing
 from app.app_utils.markdown import plain_text
 from app.app_utils.timing import log_latency
+from app.auth import env_store
 from app.context_cards import active_context_cards
 from app.tools import grounding_tools
 from app.tools.grounding_tools import (
@@ -38,13 +39,6 @@ from app.tools.grounding_tools import (
     _source,
     search_maps_grounded,
     search_web_grounded,
-)
-
-ROOT = Path(__file__).resolve().parents[2]
-_PROBE = (
-    "import os, app; "
-    "from google.adk.utils.env_utils import is_enterprise_mode_enabled; "
-    "print(os.environ['GOOGLE_GENAI_USE_ENTERPRISE'], is_enterprise_mode_enabled())"
 )
 
 
@@ -208,63 +202,61 @@ async def test_specialist_answers_reach_voice_and_card_without_markdown(
 # ---- Vertex AI (Enterprise) default -----------------------------------------
 
 
-def _import_app(dotenv: Path, **env: str) -> str:
-    """`import app` in a fresh interpreter with neither flag set, plus `env`."""
-    clean = {
-        k: v
-        for k, v in os.environ.items()
-        if k
-        not in (
+@pytest.fixture
+def default_dotenv(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[Path]:
+    """`load_dotenv_defaults()` reading `tmp_path/.env` as the default `.env`.
+
+    The whole process environment is restored afterwards, since `.env.example`
+    fills every key it has a default for.
+    """
+    path = tmp_path / ".env"
+    monkeypatch.setattr(env_store, "DEFAULT_DOTENV_PATH", path)
+    with mock.patch.dict(os.environ):
+        for key in (
             "GOOGLE_GENAI_USE_ENTERPRISE",
             "GOOGLE_GENAI_USE_VERTEXAI",
-            "VOICE_AGENT_LOAD_DOTENV",
             "VOICE_AGENT_DOTENV_PATH",
-        )
-    }
-    result = subprocess.run(
-        [sys.executable, "-c", _PROBE],
-        cwd=ROOT,
-        env={
-            **clean,
-            "ADK_DISABLE_LOAD_DOTENV": "1",
-            "VOICE_AGENT_DOTENV_PATH": str(dotenv),
-            **env,
-        },
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=120,
-    )
-    return result.stdout.strip().splitlines()[-1]
+            "GOOGLE_CLOUD_PROJECT",
+            "APP_URL",
+            "LIVE_VOICE_NAME",
+        ):
+            os.environ.pop(key, None)
+        os.environ["VOICE_AGENT_LOAD_DOTENV"] = "1"
+        yield path
 
 
-@pytest.fixture
-def dotenv_without_genai_flag(tmp_path: Path) -> Path:
-    lines = [
-        f"{key}={value}"
-        for key, value in dotenv_values(ROOT / ".env.example").items()
-        if value
-        and not key.startswith("GOOGLE_GENAI_USE_")
-        and not value.startswith("<TODO")
-    ]
-    path = tmp_path / ".env"
-    path.write_text("\n".join(lines) + "\n")
-    return path
-
-
-def test_vertex_ai_is_the_default_when_unset(
-    dotenv_without_genai_flag: Path,
+def test_vertex_ai_is_the_default_when_dotenv_omits_it(
+    default_dotenv: Path,
 ) -> None:
-    assert _import_app(dotenv_without_genai_flag) == "true True"
+    default_dotenv.write_text("LIVE_VOICE_NAME=Puck\n")
+
+    env_store.load_dotenv_defaults()
+
+    assert os.environ["GOOGLE_GENAI_USE_ENTERPRISE"] == "true"
+    assert is_enterprise_mode_enabled()
+    assert os.environ["LIVE_VOICE_NAME"] == "Puck"
 
 
-def test_an_explicit_value_is_kept(dotenv_without_genai_flag: Path) -> None:
-    assert (
-        _import_app(
-            dotenv_without_genai_flag, GOOGLE_GENAI_USE_ENTERPRISE="false"
-        )
-        == "false False"
-    )
+def test_an_explicit_value_is_kept(default_dotenv: Path) -> None:
+    default_dotenv.write_text("GOOGLE_GENAI_USE_ENTERPRISE=false\n")
+
+    env_store.load_dotenv_defaults()
+
+    assert os.environ["GOOGLE_GENAI_USE_ENTERPRISE"] == "false"
+    assert not is_enterprise_mode_enabled()
+
+
+def test_blank_and_placeholder_defaults_stay_unset(
+    default_dotenv: Path,
+) -> None:
+    default_dotenv.write_text("")
+
+    env_store.load_dotenv_defaults()
+
+    assert "GOOGLE_CLOUD_PROJECT" not in os.environ
+    assert "APP_URL" not in os.environ
 
 
 # ---- latency logging --------------------------------------------------------

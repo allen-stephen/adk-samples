@@ -1,6 +1,6 @@
 # Configuration
 
-Configuration lives in `.env` at the repo root. `make onboard` creates it from [`.env.example`](../.env.example), which declares every variable the code reads with its default value populated (and `GOOGLE_CLOUD_PROJECT=<TODO: update-this-value>`). [`app/__init__.py`](../app/__init__.py) calls `load_dotenv_defaults()` (falling back to `.env.example` when `.env` is absent), and model names are read through [`app/app_utils/models.py`](../app/app_utils/models.py) with no hardcoded literal fallbacks in Python code. Values already in the process environment take precedence.
+Configuration lives in `.env` at the repo root. `make onboard` creates it from [`.env.example`](../.env.example), which declares every variable the code reads with its default value populated (and `GOOGLE_CLOUD_PROJECT=<TODO: update-this-value>`). [`app/__init__.py`](../app/__init__.py) calls `load_dotenv_defaults()`, which loads `.env` and then fills any variable it leaves unset from `.env.example` (skipping blank values and `<TODO: ...>` placeholders; not done when `VOICE_AGENT_DOTENV_PATH` points elsewhere), and model names are read through [`app/app_utils/models.py`](../app/app_utils/models.py) with no hardcoded literal fallbacks in Python code. Values already in the process environment take precedence.
 
 In this doc:
 
@@ -17,7 +17,7 @@ In this doc:
 | `GOOGLE_CLOUD_PROJECT` | — | GCP project for Vertex AI and computers. Required (`<TODO: update-this-value>` in `.env.example`). |
 | `GOOGLE_CLOUD_LOCATION` | `global` | Vertex AI location for text models; keep `global`. Computers use `SANDBOX_GCP_LOCATION` instead. |
 | `LIVE_MODEL_LOCATION` | `us-central1` | Regional Vertex AI location for `LIVE_MODEL` ([`app/app_utils/model_locations.py`](../app/app_utils/model_locations.py)). |
-| `GOOGLE_GENAI_USE_ENTERPRISE` | `true` | Use Vertex AI with ADC (defaulted in [`app/__init__.py`](../app/__init__.py)). Computers receive both this and `GOOGLE_GENAI_USE_VERTEXAI`. |
+| `GOOGLE_GENAI_USE_ENTERPRISE` | `true` | Use Vertex AI with ADC (defaulted from `.env.example` even when `.env` omits it). Computers receive both this and `GOOGLE_GENAI_USE_VERTEXAI`. |
 | `LIVE_MODEL` | `gemini-3.8-live` | Gemini Live model for the voice agent ([`app/agent.py`](../app/agent.py), [`app/app_utils/models.py`](../app/app_utils/models.py)). |
 | `GROUNDING_MODEL` | `gemini-3.5-flash-lite` | Model for Search, Maps, and turn summaries (`thinking_level=MINIMAL`). |
 | `LIVE_VOICE_NAME` | `Aoede` | Default voice persona ([Settings per user](security-model.md#settings-per-user)). |

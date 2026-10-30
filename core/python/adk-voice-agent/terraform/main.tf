@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# State is local on purpose; README.md#state shows how to add a GCS backend.
 terraform {
   required_version = ">= 1.5"
 

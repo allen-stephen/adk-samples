@@ -47,11 +47,23 @@ def load_dotenv_defaults() -> None:
     path = dotenv_path()
     if path.exists():
         load_dotenv(path, override=False)
-    elif (
-        not os.getenv("VOICE_AGENT_DOTENV_PATH")
-        and DEFAULT_DOTENV_EXAMPLE_PATH.exists()
-    ):
-        load_dotenv(DEFAULT_DOTENV_EXAMPLE_PATH, override=False)
+    if not os.getenv("VOICE_AGENT_DOTENV_PATH"):
+        load_example_defaults(DEFAULT_DOTENV_EXAMPLE_PATH)
+
+
+def load_example_defaults(example: Path) -> None:
+    """Fill variables still unset from `.env.example`, the single home of defaults.
+
+    Runs under `.env`, so a `.env` written before a key was added still gets its
+    default. Blank values and `<TODO: ...>` placeholders mean "unset" and are skipped.
+    """
+    if not example.exists():
+        return
+    for key, value in dotenv_values(example).items():
+        if not value or (value.startswith("<TODO") and value.endswith(">")):
+            continue
+        if key not in os.environ:
+            os.environ[key] = value
 
 
 def read_dotenv() -> dict[str, str]:

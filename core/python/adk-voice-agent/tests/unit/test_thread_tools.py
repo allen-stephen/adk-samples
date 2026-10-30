@@ -63,6 +63,15 @@ async def test_identical_dispatches_in_one_turn_start_one_thread(lab: Lab):
     await lab.settle(first["thread_id"])
 
 
+async def test_each_user_has_their_own_dispatch_lock(lab: Lab):
+    """The lock lives on the registry, one per user, so it never outlives its loop."""
+    registry = lab.registry
+    assert registry.dispatch_lock() is registry.dispatch_lock()
+    with run_as("someone-else@example.com"):
+        theirs = registry.dispatch_lock()
+    assert theirs is not registry.dispatch_lock()
+
+
 async def test_a_repeated_request_gets_the_running_thread_back(lab: Lab):
     """Same user, goal (case and spacing aside), and project while the first is active
     and recent: the registry hands it back. Anything else is a new thread."""

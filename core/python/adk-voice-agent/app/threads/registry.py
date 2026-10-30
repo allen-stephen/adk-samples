@@ -97,10 +97,15 @@ class ThreadRegistry:
         self._threads: dict[str, ThreadHandle] = {}
         self._listeners: list[tuple[str | None, Listener]] = []
         self._lock = asyncio.Lock()
+        self._dispatch_locks: dict[str, asyncio.Lock] = {}
         self.orphan_cleanup: asyncio.Task[None] | None = None
         self._grants: dict[str, set[str]] = {}
 
     # ---- thread API -------------------------------------------------------
+
+    def dispatch_lock(self) -> asyncio.Lock:
+        """The acting user's lock around a duplicate check and the dispatch it guards."""
+        return self._dispatch_locks.setdefault(acting_user_id(), asyncio.Lock())
 
     async def dispatch(
         self,

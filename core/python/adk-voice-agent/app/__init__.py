@@ -12,14 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
 from app.auth.env_store import load_dotenv_defaults
 
+# Defaults, including GOOGLE_GENAI_USE_ENTERPRISE=true, come from `.env.example`.
 load_dotenv_defaults()
-
-# Vertex AI is the only auth path; `.env.example` isn't loaded once `.env` exists.
-os.environ.setdefault("GOOGLE_GENAI_USE_ENTERPRISE", "true")
 
 from .agent import app  # noqa: E402
 

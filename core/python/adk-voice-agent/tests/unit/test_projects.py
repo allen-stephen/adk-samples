@@ -177,7 +177,8 @@ def test_a_status_note_is_an_agents_md_with_a_status_section():
 
 
 def test_a_project_tint_is_a_stable_hue():
-    assert tint(PORTLAND) == tint(PORTLAND)
+    # Pinned: the same hue on every server and run.
+    assert tint(PORTLAND) == 312
     assert all(0 <= tint(p) < 360 for p in (PORTLAND, "code/x", "scratch/y"))
     assert tint(PORTLAND) != tint("projects/sell-the-car")
 

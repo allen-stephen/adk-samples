@@ -33,6 +33,7 @@ from app.voice.thread_updates import ThreadUpdates
 from app.workers import factory
 from app.workers.environment import LocalEnvironment, SandboxEnvironment
 from app.workers.factory import sandbox_owner
+from app.workers.providers.common import is_owner_id
 from app.workers.providers.static import StaticProvider
 from tests.fake_integrations import iap_headers
 from tests.fakes import GOAL, REPO, Lab, seed_thread
@@ -303,7 +304,9 @@ async def test_local_workspaces_are_per_user(monkeypatch: pytest.MonkeyPatch):
 
 
 async def test_sandbox_owner_ids_are_stable_and_not_identifying():
-    assert sandbox_owner(ALICE) == sandbox_owner(ALICE)
+    # Pinned: the same id on every server and run, or users lose their computer.
+    assert sandbox_owner(ALICE) == "u-ff8d9819fc0e12bf"
+    assert is_owner_id(sandbox_owner(ALICE))
     assert sandbox_owner(ALICE) != sandbox_owner(BOB)
     value = sandbox_owner(ALICE)
     assert "alice" not in value and "@" not in value

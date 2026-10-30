@@ -379,8 +379,14 @@ def test_spoken_compliance_flags_thread_ids(spoken: str, flagged: bool):
 
 @pytest.mark.parametrize("dataset", ALL_DATASETS)
 def test_every_case_starts_from_fixtures_that_exist(dataset: str):
-    for case in json.loads((DATASETS / dataset).read_text())["eval_cases"]:
-        history.load(history.case_history_names(case["eval_case_id"]))
+    fixtures = set(yaml.safe_load(history.FIXTURES.read_text()) or {})
+    missing = [
+        (case["eval_case_id"], name)
+        for case in json.loads((DATASETS / dataset).read_text())["eval_cases"]
+        for name in history.case_history_names(case["eval_case_id"])
+        if name not in fixtures
+    ]
+    assert not missing, f"history fixtures missing from {history.FIXTURES}"
 
 
 @pytest.mark.parametrize("dataset", ALL_DATASETS)

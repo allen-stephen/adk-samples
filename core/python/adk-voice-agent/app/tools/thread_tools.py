@@ -19,7 +19,6 @@ The docstrings are the tool declarations the live model reads.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import Any
 
@@ -68,8 +67,6 @@ _PROJECT_KINDS = {
     ProjectKind.SCRATCH: "Recent scratch folders",
 }
 _PROJECTS_PER_KIND = 10
-# The live model occasionally emits the same dispatch twice in one turn.
-_dispatch_lock = asyncio.Lock()
 
 _STEER_REPLIES = {
     InstructionKind.DENIAL: "Declined that for {name}. It is continuing without it.",
@@ -135,7 +132,8 @@ async def start_thread(
     except ValueError as exc:
         return {"message": f"Could not start the thread: {exc}"}
     session = _session(tool_context)
-    async with _dispatch_lock:
+    # The live model occasionally emits the same dispatch twice in one turn.
+    async with registry.dispatch_lock():
         if duplicate := registry.recent_duplicate(goal, resolved):
             return _reply(
                 duplicate,
